@@ -1,0 +1,679 @@
+<html>
+<head>
+	<title>Football World Cup 18</title>
+	<style type="text/css">
+		/*.container { width: 90%; height: -webkit-fill-available; background: lightblue; margin: auto; padding: 10px; }*/
+
+		.column { float: left; width: 49.5%; }
+		.left-section .column-4 { float: left; width: 20%; padding: 5px; }
+		.right-section .column-4 { float: right; width: 20%; padding: 5px; }
+
+		/* Clear floats after the columns */
+		.row:after { content: ""; display: table; clear: both; }
+
+		/*.section { width: 49.6%; height: auto; background: white; float: left; }*/
+
+		/*.section .team-section-container { width: fit-content; }*/
+		/*.section .knockout-section-container { width: fit-content; }*/
+		/*.right-section .team-section-container { width: fit-content; }*/
+
+		.section.right-section .group-section { text-align: -webkit-right; }
+		.section .group-section { border: 2px solid #696969; }
+		.section .group-section h2 { color: #000; padding: 0px 10px 10px; }
+
+		.section .group-section .team-flag-section, 
+		.section .knockout-match-container .knockout-team,
+		.round-team 
+		{ width: 90px; height: 60px; padding: 10px 15px 25px; border: 1px solid #000; text-align: center; }
+		
+		.section .group-section .team-flag-section img, 
+		.section .knockout-match-container .knockout-team img ,
+		.round-team img 
+		{ opacity: 0.5; filter: grayscale(100%); width: 100%; height: 100%; }
+
+		.section .group-section .team-flag-section.team-flag-winner img, 
+		.section .group-section .team-flag-section.team-flag-runnerUp img { opacity: 1; filter: grayscale(0%); transition: 0.5s all; }
+
+		img:hover { opacity: 1!important; filter: grayscale(0%)!important; transition: 0.5s all!important; }
+
+		.knockout-match-container {margin-top: 70%; transition: 2s all; }
+		/*.quarter-final-section .round-match-container {margin-top: 100%; transition: 2s all; }*/
+		
+		.quarter-final-section.quarterfinal-top .round-match-container { margin-top: 0px; }
+		.quarter-final-section.quarterfinal-bottom .round-match-container { margin-top: 290px; }
+	
+		.semi-final-section.semifinal-top .round-match-container { margin-top: 0px; }
+		.semi-final-section.semifinal-bottom .round-match-container { margin-top: 290px; }
+
+		.knockout-match-container .knockout-winner-team img, 
+		.round-winner-team img 
+		{ opacity: 1!important; filter: grayscale(0%)!important; }
+		
+		.hide { display: none; }
+
+		.loader { text-align: center; color: black; font-style: italic; text-transform: 2s all; opacity: 1; }
+		.left-section{ border: 2px solid red; }
+		.right-section{ border: 2px solid blue; }
+
+	</style>
+</head>
+<body>
+
+	<div class="container row"></div>
+
+	<script type="text/javascript">
+
+		var soccer = (function( win, doc ) {
+
+			var container = doc.querySelector('.container'),
+				soccerData = null,
+				leftSection = null,
+				rightSection = null;
+			
+			var addSections = function() {
+				
+				return new Promise(function( resolve, reject ) {
+
+					if( !container || container == null )
+					{
+						reject('Could not find container element...');
+					}
+
+					var leftNode = doc.createElement("div");
+
+					leftNode.classList.add('section', 'left-section', 'hide', 'column');
+
+					var rightNode = doc.createElement("div");
+
+					rightNode.classList.add('section', 'right-section', 'hide', 'column');
+
+					var loaderNode = doc.createElement("div"),
+						textNode =  doc.createElement("h2");
+
+					loaderNode.classList.add('loader');
+
+					var loadingTextNode = doc.createTextNode("loading..."); 
+
+					textNode.appendChild(loadingTextNode); 
+					loaderNode.appendChild(textNode); 
+					
+					container.appendChild(leftNode);
+					container.appendChild(rightNode);
+					container.appendChild(loaderNode);
+
+					resolve( true );
+				});
+			};
+
+			var getFixtures = function() {
+				
+				return new Promise(function( resolve, reject ) {
+
+					// Source
+					// https://raw.githubusercontent.com/lsv/fifa-worldcup-2018/master/data.json
+					var url = './data.json';
+
+					fetch(url, {
+						method: 'GET',
+						headers:{
+							'Content-Type': 'application/json'
+						}
+					})
+					.then(function( fetchRes ) {
+
+						if( !fetchRes || fetchRes == null )
+						{
+							reject('No data...');
+						}
+						
+						return fetchRes.json()
+					})
+					.then(function( fetchParsedRes ) {
+						
+						var fixtures = fetchParsedRes.groups;
+
+						var fixturesArray = [];
+
+						for (group in fixtures) {
+
+							fixtures[group].groupName = group;
+
+							fixturesArray.push( fixtures[group] )
+						}
+
+						for (var i = 0, len = fixturesArray.length; i < len; i++) {
+							
+							var thisFixture = fixturesArray[i];
+
+							thisFixture['roundOne'] = thisFixture.matches;
+
+							var round16 = fetchParsedRes.knockout.round_16.matches,
+								round8 	= fetchParsedRes.knockout.round_8.matches,
+								round4 	= fetchParsedRes.knockout.round_4.matches;
+
+							// Split each match from round 16
+								thisFixture['roundTwo'] = round16.splice(0, 1);
+
+							// Give one match twice to round 8
+							// to show home and away match
+		
+								var round8Matches = [];
+
+								for (var k = 0; k < i+1; k++) {
+									
+									var thisRound8 = round8[k];
+
+									if( k * 2 == i || k * 2 == (i-1) )
+									{
+										round8Matches.push( thisRound8 );
+									}
+								};
+							
+								thisFixture['roundThree'] = round8Matches;
+
+							// Give one match to round 4 per 2 matches
+		
+								var round4Matches = [];
+
+								for (var l = 0, len4 = round4.length; l < len4; l++) {
+									
+									var thisRound4 = round4[l];
+
+									if( (l == 0 && (i == 1 || i == 2)) || (l == 1 && (i == 5 || i == 6)) )
+									{
+										round4Matches.push( thisRound4 );
+									}
+								};
+							
+								thisFixture['roundFour'] = round4Matches;
+						};
+
+						fetchParsedRes['fixtures'] = fixturesArray;
+
+						soccerData = fetchParsedRes;
+
+						resolve( soccerData );
+
+					})
+					.catch(function( fetchErr ) {
+						
+						console.log(fetchErr);
+						reject();
+					});
+						
+				});
+			};
+
+			var getTeamInfo = function( teamId ) {
+				
+				if( !soccerData || soccerData == null )
+				{
+					return false;
+				}
+
+				var teams = soccerData.teams;
+
+				for (var i = 0, len = teams.length; i < len; i++) {
+					var thisTeam = teams[i];
+
+					if( thisTeam && thisTeam.id == teamId )
+					{
+						return thisTeam;
+					}
+				}; 				
+			};
+
+			var createTeamDiv = function( team ) {
+				
+				var teamDiv 		= doc.createElement('div'),
+					teamImgDiv 		= doc.createElement('img'),
+					teamLabelDiv 	= doc.createElement('label');
+
+				teamImgDiv.src = team.flag;
+				teamImgDiv.title = team.name + ' ' + team.id;
+
+				var teamNameNode = doc.createTextNode( team.name ); 
+				teamLabelDiv.appendChild( teamNameNode );
+
+				teamDiv.appendChild( teamImgDiv );
+				teamDiv.appendChild( teamLabelDiv );
+
+				return teamDiv;
+			};
+
+			var groupMatchStructure = function( team, runnerUp, winner ) {
+
+				if( !team )
+				{
+					return false;
+				}
+
+				var teamDiv 		= doc.createElement('div'),
+					teamImgDiv 		= doc.createElement('img'),
+					teamLabelDiv 	= doc.createElement('label');
+
+				var runnerUpClass 	= 'team-flag-section',
+					winnerClass 	= 'team-flag-section',
+					title 			= '';
+
+				if( team.id == runnerUp )
+				{
+					title += 'Runner Up - ';
+					runnerUpClass = 'team-flag-runnerUp';
+				}
+
+				if( team.id == winner )
+				{
+					title += 'Winner - ';
+					runnerUpClass = 'team-flag-winner';
+				}
+
+				teamImgDiv.src = team.flag;
+				teamImgDiv.title = title + team.name;
+
+				// Add label to to team image
+
+					var teamNameNode = doc.createTextNode( team.name ); 
+					teamLabelDiv.appendChild( teamNameNode );
+
+				teamDiv.appendChild( teamImgDiv );
+				teamDiv.appendChild( teamLabelDiv );
+
+				teamDiv.classList.add('team-flag-section', runnerUpClass, winnerClass );
+
+				return teamDiv;
+			};
+
+			var knockOutMatchStructure = function( match ) {
+
+				// Get Teams
+
+					var homeTeam 	= getTeamInfo( match.home_team ),
+						awayTeam 	= getTeamInfo( match.away_team ),
+						winner 		= getTeamInfo( match.winner );
+
+				// Home Team Structure
+
+					var homeDiv 		= doc.createElement('div'),
+						homeImgDiv 		= doc.createElement('img'),
+						homeLabelDiv 	= doc.createElement('label');
+
+					homeDiv.classList.add('knockout-team', 'knockout-home-team');
+
+					homeImgDiv.src = homeTeam.flag;
+					homeImgDiv.title = homeTeam.name;
+
+					var teamNameNode = doc.createTextNode( homeTeam.name ); 
+					homeLabelDiv.appendChild( teamNameNode );
+
+					homeDiv.appendChild( homeImgDiv );
+					homeDiv.appendChild( homeLabelDiv );
+
+				// Away Team Structure
+
+					var awayDiv 		= doc.createElement('div'),
+						awayImgDiv 		= doc.createElement('img'),
+						awayLabelDiv 	= doc.createElement('label');
+
+					awayDiv.classList.add('knockout-team', 'knockout-away-team');
+
+					awayImgDiv.src = awayTeam.flag;
+					awayImgDiv.title = awayTeam.name;
+
+					var teamNameNode = doc.createTextNode( awayTeam.name ); 
+					awayLabelDiv.appendChild( teamNameNode );
+
+					awayDiv.appendChild( awayImgDiv );
+					awayDiv.appendChild( awayLabelDiv );
+
+				// Check for winner
+
+					if( winner && winner.id == homeTeam.id )
+					{
+						homeDiv.classList.add('knockout-winner-team');
+					}
+					else if( winner && winner.id == awayTeam.id )
+					{
+						awayDiv.classList.add('knockout-winner-team');
+					}
+					else
+					{
+						// Match Draw...
+					}
+ 
+				// Knockout Match Structure
+
+					var knockoutContainer = doc.createElement('div');
+
+					knockoutContainer.classList.add('knockout-match-container');
+
+					knockoutContainer.appendChild( homeDiv );
+					knockoutContainer.appendChild( awayDiv );
+
+				return knockoutContainer;
+			};
+
+			var quarterFileMatchStructure = function( match, team ) {
+
+				// Check for winner
+
+					var isWinner = match.winner == team.id;
+
+					var teamDiv = createTeamDiv( team );
+
+					teamDiv.classList.add('round-team', 'round-home-team');
+
+					if( isWinner )
+					{
+						teamDiv.classList.add('round-winner-team');
+					}
+ 
+				// Knockout Match Structure
+
+					var knockoutContainer = doc.createElement('div');
+
+					knockoutContainer.classList.add('round-match-container');
+
+					knockoutContainer.appendChild( teamDiv );
+
+				return knockoutContainer;
+			};
+
+			var groupStructureContainer = function( group, ind, groupPos ) {
+				
+				var matchDiv 		= doc.createElement("div"),
+					knockoutDiv 	= doc.createElement("div"),
+					quarterFinalDiv = doc.createElement("div"),
+					groupDiv 		= doc.createElement('div'),
+					groupNameDiv 	= doc.createElement("h2");
+
+				var round16 = soccerData.knockout.round_16,
+					round8 	= soccerData.knockout.round_8,
+					round4 	= soccerData.knockout.round_4,
+					round2 	= soccerData.knockout.round_2;
+
+				matchDiv.classList.add('group-section', 'group-' + group.groupName + '-section', 'row');
+
+				// Create and Add Group Name 
+
+					var groupNameText = doc.createTextNode( group.name ); 
+					groupNameDiv.appendChild( groupNameText );
+
+					matchDiv.appendChild( groupNameDiv );
+				
+				// Create team flags div
+
+					groupDiv.classList.add('team-section-container', 'column-4');
+
+					var playingTeams = [],
+						runnerUp = group.runnerup,
+						winner = group.winner;
+
+					for (var i = 0, len = group.matches.length; i < len; i++) {
+						var thisGroup = group.matches[i];
+
+						if( playingTeams.indexOf( thisGroup.away_team ) == -1 )
+							playingTeams.push( thisGroup.away_team );
+						if( playingTeams.indexOf( thisGroup.home_team ) == -1 )
+							playingTeams.push( thisGroup.home_team );
+					};
+
+					for (var i = 0, len = playingTeams.length; i < len; i++) {
+						
+						var thisPlayingTeams = playingTeams[i];
+
+						var teamDiv = groupMatchStructure(getTeamInfo(thisPlayingTeams), runnerUp, winner);
+
+						groupDiv.appendChild( teamDiv );
+					};
+
+					matchDiv.appendChild( groupDiv );
+
+				// KnockOut 16 div
+
+					knockoutDiv.classList.add('knockout-section-container', 'column-4');
+
+					knockoutDiv.appendChild( knockOutMatchStructure( round16.matches[0] ) );
+
+					matchDiv.appendChild( knockoutDiv );
+
+				// Quarter Final div
+
+					quarterFinalDiv.classList.add('quarter-final-container', 'column-4');
+
+					quarterFinalDiv.appendChild( knockOutMatchStructure( round16.matches[0] ) );
+
+					matchDiv.appendChild( quarterFinalDiv );
+
+				// if ind is present then
+				// it will be added to the 
+				// leftSection else to the 
+				// rightSection.
+
+				if( ind )
+				{
+					leftSection.appendChild( matchDiv );
+					// leftSection.appendChild( knockoutDiv );
+				}
+				else
+				{
+					rightSection.appendChild( matchDiv );
+					// rightSection.appendChild( knockoutDiv );					
+				}
+			};
+
+			var getMatchesStructures = function( wcData ) {
+
+				console.log(wcData);
+
+				var fixtures 	= wcData.fixtures;
+
+				var noOfGroups 	= fixtures.length;
+
+				fixtures.forEach( function( thisFixture, ind ) {
+				
+					var matchDiv 		= doc.createElement("div"),
+						structureDiv 	= doc.createElement("div"),
+						firstRoundDiv 	= doc.createElement("div"),
+						knockoutDiv 	= doc.createElement("div"),
+						quarterFinalDiv = doc.createElement("div"),
+						semiFinalDiv 	= doc.createElement("div"),
+						groupNameDiv 	= doc.createElement("h2");
+				
+					var roundOne 		= thisFixture.roundOne,
+						roundTwo 		= thisFixture.roundTwo,
+						roundThree 		= thisFixture.roundThree,
+						roundFour 		= thisFixture.roundFour;
+
+					// console.log( thisFixture );
+
+					matchDiv.classList.add('group-section', 'group-' + thisFixture.groupName + '-section', 'row');
+
+					var groupPosition = ind < parseInt( noOfGroups / 2 );
+
+					// Create and Add Group Name 
+
+						var groupNameText = doc.createTextNode( thisFixture.name ); 
+						groupNameDiv.appendChild( groupNameText );
+
+						matchDiv.appendChild( groupNameDiv );
+
+					// Create tree structure div
+
+						structureDiv.classList.add('match-structure');
+
+						// Add First Round div
+
+							firstRoundDiv.classList.add('column-4', 'match-section', 'first-round-section');
+
+							// var firstRoundLabel = doc.createElement('label');
+							// var firstRoundText = doc.createTextNode( 'First Round' ); 
+							// firstRoundLabel.appendChild( firstRoundText );
+
+							var playingTeams = [],
+								runnerUp = thisFixture.runnerup,
+								winner = thisFixture.winner;
+
+							for (var i = 0, len = roundOne.length; i < len; i++) {
+								var thisGroup = roundOne[i];
+
+								if( playingTeams.indexOf( thisGroup.away_team ) == -1 )
+									playingTeams.push( thisGroup.away_team );
+								if( playingTeams.indexOf( thisGroup.home_team ) == -1 )
+									playingTeams.push( thisGroup.home_team );
+							};
+
+							for (var i = 0, len = playingTeams.length; i < len; i++) {
+								
+								var thisPlayingTeams = playingTeams[i];
+
+								var teamDiv = groupMatchStructure(getTeamInfo(thisPlayingTeams), runnerUp, winner);
+
+								firstRoundDiv.appendChild( teamDiv );
+							};
+
+							// firstRoundDiv.appendChild( firstRoundLabel );
+							structureDiv.appendChild( firstRoundDiv );
+
+						// Add Knockout Round div
+
+							knockoutDiv.classList.add('column-4', 'match-section', 'knockout-section');
+
+							for (var i = 0, len2 = roundTwo.length; i < len2; i++) {
+								var thisRoundTwo = roundTwo[i];
+
+								knockoutDiv.appendChild( knockOutMatchStructure( thisRoundTwo ) );
+							};
+
+							structureDiv.appendChild( knockoutDiv );
+
+						// Add Quarter Final Round div
+
+							quarterFinalDiv.classList.add('column-4', 'match-section', 'quarter-final-section');
+
+							for (var m = 0, len3 = roundThree.length; m < len3; m++) {
+								
+								var thisRoundThree = roundThree[m];
+
+								if( ind % 2 == 0 )
+								{
+									// show home team
+
+									var team = getTeamInfo( thisRoundThree.home_team );
+
+									quarterFinalDiv.classList.add('quarterfinal-bottom');
+
+									quarterFinalDiv.appendChild( quarterFileMatchStructure( thisRoundThree, team ) );
+								}
+								else
+								{
+									// show away team
+
+									var team = getTeamInfo( thisRoundThree.away_team );
+
+									quarterFinalDiv.classList.add('quarterfinal-top');
+
+									quarterFinalDiv.appendChild( quarterFileMatchStructure( thisRoundThree, team ) );
+								}
+
+							};
+
+							structureDiv.appendChild( quarterFinalDiv );
+
+						// Add Semi Final Round div
+
+							semiFinalDiv.classList.add('column-4', 'match-section', 'semi-final-section');
+
+							for (var m = 0, len3 = roundFour.length; m < len3; m++) {
+								
+								var thisRoundFour = roundFour[m];
+
+								if( ind % 2 == 0 )
+								{
+									// show home team
+
+									var team = getTeamInfo( thisRoundFour.home_team );
+
+									semiFinalDiv.classList.add('semifinal-top');
+
+									semiFinalDiv.appendChild( quarterFileMatchStructure( thisRoundFour, team ) );
+								}
+								else
+								{
+									// show away team
+
+									var team = getTeamInfo( thisRoundFour.away_team );
+
+									semiFinalDiv.classList.add('semifinal-bottom');
+
+									semiFinalDiv.appendChild( quarterFileMatchStructure( thisRoundFour, team ) );
+								}
+
+							};
+
+							structureDiv.appendChild( semiFinalDiv );
+
+						matchDiv.appendChild( structureDiv );
+
+					// Group position will determine
+					// whether the group falls 
+					// within the first 4 groups
+					// or last 4 groups
+					// depending upon 
+					// how many groups are present.
+
+					if( groupPosition ) {
+
+						leftSection.appendChild( matchDiv );
+					}
+					else {
+
+						rightSection.appendChild( matchDiv );
+					}
+				});
+			};
+
+			addSections()
+			.then(function( res ) {
+
+				return new Promise(function( resolve, reject ) {
+
+					leftSection = container.querySelector('.left-section');
+					rightSection = container.querySelector('.right-section');
+
+					if( !leftSection || !rightSection )
+					{
+						reject('Sections are undefined...');
+					}
+
+					getFixtures()
+					.then(function( wcData ) {
+						
+						// Remove hide from Left & Right Sections
+
+							leftSection.classList.remove('hide');
+							rightSection.classList.remove('hide');
+
+						// Remove Loader...
+
+							var loadingSection = container.querySelector('.loader');
+
+							container.removeChild( loadingSection );
+
+						getMatchesStructures( wcData );
+					})
+					.catch(function( fixturesErr ) {
+						
+						console.log(fixturesErr);
+					});
+				});
+			})
+			.catch(function( err ) {
+				console.log(err);
+			})
+
+		})( window, document );
+
+	</script>
+</body>
+</html>

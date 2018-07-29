@@ -1,0 +1,22 @@
+{
+    "author": "jaidepala@gmail.com",
+    "dependencies": {
+        "express": "4.16.3"
+    },
+    "description": "",
+    "engines": {
+        "node": "8.11.3",
+        "npm": "5.6.0"
+    },
+    "license": "ISC",
+    "main": "server.js",
+    "name": "fixtures-2018",
+    "scripts": {
+        "heroku-prebuild": "echo This runs before Heroku installs your dependencies.",
+        "heroku-postbuild": "echo This runs afterwards.",
+        "postinstall": "echo Post Install executed",
+        "start": "node server.js",
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "version": "1.0.1"
+}
